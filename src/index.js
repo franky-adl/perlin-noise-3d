@@ -7,7 +7,7 @@ import { OrbitControls } from "three/examples/jsm/controls/OrbitControls"
 // Core boilerplate code deps
 import { createCamera, createRenderer, runApp, getDefaultUniforms } from "./core-utils"
 
-import vertex from "./shaders/vertexParticles.glsl"
+import vertex from "./shaders/vertex.glsl"
 import fragment from "./shaders/fragment.glsl"
 
 global.THREE = THREE
