@@ -20,7 +20,7 @@ THREE.ColorManagement.enabled = true
  *************************************************/
 const params = {
   // general scene params
-  rotateSpeed: 0.05,
+  rotateSpeed: 0.4,
   randomFactor: { value: 0.02 },
   perlinFactor: { value: 2.0 }
 }
