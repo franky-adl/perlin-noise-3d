@@ -25,9 +25,10 @@ const params = {
   perlinFactor: { value: 2.0 }
 }
 const uniforms = getDefaultUniforms()
-// WIDTH squared = number of particles in our particle system, ie 1000000
-const WIDTH = 1000
-
+// WIDTH of the cube of particles
+const WIDTH = 100
+// TOTAL = total number of particles
+const TOTAL = Math.pow(WIDTH, 3)
 
 /**************************************************
  * 1. Initialize core threejs components
@@ -63,17 +64,22 @@ let app = {
     scene.background = new THREE.Color(0x222222)
 
     this.geometry = new THREE.BufferGeometry()
-    let positions = new Float32Array(WIDTH*WIDTH*3)
-    // for identifying each particle, like an id
-    let reference = new Float32Array(WIDTH*WIDTH*2)
 
-    for (let i = 0; i < WIDTH*WIDTH; i++) {
-      let x = (i%100)/100 * 2 - 1
-      let y = (Math.floor(i/100)%100)/100 * 2 - 1
-      let z = ~~(i/(100*100))/100 * 2 - 1
-      let xx = (i%WIDTH)/WIDTH
-      // ~~ alternative for Math.floor(), provided that the target is already positive number
-      let yy = ~~(i/WIDTH)/WIDTH
+    let positions = new Float32Array(TOTAL*3)
+    // for identifying each particle, like an id
+    let reference = new Float32Array(TOTAL*2)
+
+    for (let i = 0; i < TOTAL; i++) {
+      let x = (i%WIDTH)/WIDTH * 2 - 1
+      let y = (Math.floor(i/WIDTH)%WIDTH)/WIDTH * 2 - 1
+      // ~~ is alternative for Math.floor(), provided that the target is already positive number
+      let z = ~~(i/(WIDTH*WIDTH))/WIDTH * 2 - 1
+
+      // think of xx,yy to be particle coordinates of a 2D plane of the same number of particles
+      // with width and height of 1000 (1000 squared = Math.pow(100, 3))
+      let xx = (i%1000)/1000
+      let yy = ~~(i/1000)/1000
+
       positions.set([x,y,z], i*3)
       reference.set([xx,yy], i*2)
     }
@@ -82,7 +88,6 @@ let app = {
     this.geometry.setAttribute('reference', new THREE.BufferAttribute(reference,2))
     
     this.material = new THREE.ShaderMaterial({
-      // side: THREE.DoubleSide,
       uniforms: {
         ...uniforms,
         perlinFactor: params.perlinFactor,
