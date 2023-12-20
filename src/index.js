@@ -64,6 +64,7 @@ let app = {
     scene.background = new THREE.Color(0x222222)
 
     this.geometry = new THREE.BufferGeometry()
+
     let positions = new Float32Array(TOTAL*3)
     // for identifying each particle, like an id
     let reference = new Float32Array(TOTAL*2)
@@ -87,7 +88,6 @@ let app = {
     this.geometry.setAttribute('reference', new THREE.BufferAttribute(reference,2))
     
     this.material = new THREE.ShaderMaterial({
-      // side: THREE.DoubleSide,
       uniforms: {
         ...uniforms,
         perlinFactor: params.perlinFactor,

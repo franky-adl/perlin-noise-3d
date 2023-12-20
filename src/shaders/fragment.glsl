@@ -1,5 +1,4 @@
 float PI = 3.141592653589793238;
-uniform float time;
 varying float perlin;
 
 void main() {

@@ -104,14 +104,14 @@ float random (vec2 st) {
 }
 
 void main() {
-    float rF = randomFactor;
-    vec3 tweakedPos = position + vec3(random(reference.xy), random(reference.yx * vec2(3.0)), random(reference.xy * vec2(5.0))) * rF;
-    vec4 mvPosition = modelViewMatrix * vec4(tweakedPos, 1.);
+  float rF = randomFactor;
+  vec3 tweakedPos = position + vec3(random(reference.xy), random(reference.yx * vec2(3.0)), random(reference.xy * vec2(5.0))) * rF;
+  vec4 mvPosition = modelViewMatrix * vec4(tweakedPos, 1.);
 
-    float fF = 3.;
-    perlin = cnoise(position * (perlinFactor + sin(u_time/3.0)) + vec3(sin(u_time/2.7), cos(u_time/3.6), sin(u_time/5.5)) * fF) + 1.0;
+  float fF = 3.;
+  perlin = cnoise(position * (perlinFactor + sin(u_time/3.0)) + vec3(sin(u_time/2.7), cos(u_time/3.6), sin(u_time/5.5)) * fF) + 1.0;
 
-    gl_PointSize = smoothstep(0.6, 2.0, perlin) * 5.;
+  gl_PointSize = smoothstep(0.6, 2.0, perlin) * 5.;
 
-    gl_Position = projectionMatrix * mvPosition;
+  gl_Position = projectionMatrix * mvPosition;
 }
