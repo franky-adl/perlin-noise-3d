@@ -21,8 +21,10 @@ THREE.ColorManagement.enabled = true
 const params = {
   // general scene params
   rotateSpeed: 0.4,
+  noiseAlgoName: "perlin",
+  noiseAlgo: { value: 1 },
   randomFactor: { value: 0.02 },
-  perlinFactor: { value: 2.0 }
+  noiseRange: { value: 2.0 }
 }
 const uniforms = getDefaultUniforms()
 // WIDTH of the cube of particles
@@ -90,7 +92,8 @@ let app = {
     this.material = new THREE.ShaderMaterial({
       uniforms: {
         ...uniforms,
-        perlinFactor: params.perlinFactor,
+        noiseAlgo: params.noiseAlgo,
+        noiseRange: params.noiseRange,
         randomFactor: params.randomFactor
       },
       blending: THREE.AdditiveBlending,
@@ -108,7 +111,14 @@ let app = {
     // GUI controls
     const gui = new dat.GUI()
     gui.add(params, "rotateSpeed", 0, 1, 0.01)
-    gui.add(params.perlinFactor, "value", 2, 5, 0.1).name("perlinFactor")
+    gui.add(params, "noiseAlgoName", ["perlin", "voronoi"]).name("noiseAlgo").onChange((val) => {
+      if (val == "perlin") {
+        params.noiseAlgo.value = 1
+      } else if (val == "voronoi") {
+        params.noiseAlgo.value = 2
+      }
+    })
+    gui.add(params.noiseRange, "value", 2, 5, 0.1).name("noiseRange")
     gui.add(params.randomFactor, "value", 0, 0.1, 0.01).name("randomFactor")
 
     // Stats - show fps
