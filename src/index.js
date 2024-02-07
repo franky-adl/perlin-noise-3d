@@ -24,7 +24,8 @@ const params = {
   noiseAlgoName: "perlin",
   noiseAlgo: { value: 1 },
   randomFactor: { value: 0.02 },
-  noiseRange: { value: 2.0 }
+  noiseRange: { value: 2.0 },
+  colorVariance: { value: 1.3}
 }
 const uniforms = getDefaultUniforms()
 // WIDTH of the cube of particles
@@ -49,7 +50,7 @@ let renderer = createRenderer({ antialias: true }, (_renderer) => {
 
 // Create the camera
 // Pass in fov, near, far and camera position respectively
-let camera = createCamera(50, 0.01, 1000, { x: 0, y: 2, z: 4 })
+let camera = createCamera(50, 0.01, 1000, { x: 0, y: 1.8, z: 4 })
 
 /**************************************************
  * 2. Build your scene in this threejs app
@@ -94,7 +95,8 @@ let app = {
         ...uniforms,
         noiseAlgo: params.noiseAlgo,
         noiseRange: params.noiseRange,
-        randomFactor: params.randomFactor
+        randomFactor: params.randomFactor,
+        colorVariance: params.colorVariance
       },
       blending: THREE.AdditiveBlending,
       vertexShader: vertex,
@@ -120,6 +122,7 @@ let app = {
     })
     gui.add(params.noiseRange, "value", 2, 5, 0.1).name("noiseRange")
     gui.add(params.randomFactor, "value", 0, 0.1, 0.01).name("randomFactor")
+    gui.add(params.colorVariance, "value", 0, 3.0, 0.05).name("colorVariance")
 
     // Stats - show fps
     this.stats1 = new Stats()
