@@ -5,7 +5,7 @@ import Stats from "three/examples/jsm/libs/stats.module"
 import { OrbitControls } from "three/examples/jsm/controls/OrbitControls"
 
 // Core boilerplate code deps
-import { createCamera, createRenderer, runApp, getDefaultUniforms } from "./core-utils"
+import { createCamera, createRenderer, runApp, getDefaultUniforms, updateLoadingProgressBar } from "./core-utils"
 
 import vertex from "./shaders/vertex.glsl"
 import fragment from "./shaders/fragment.glsl"
@@ -63,6 +63,8 @@ let app = {
     // OrbitControls
     this.controls = new OrbitControls(camera, renderer.domElement)
     this.controls.enableDamping = true
+
+    await updateLoadingProgressBar(0.1)
 
     scene.background = new THREE.Color(0x222222)
 
@@ -130,6 +132,8 @@ let app = {
     this.stats1.domElement.style.cssText = "position:absolute;top:0px;left:0px;"
     // this.container is the parent DOM element of the threejs canvas element
     this.container.appendChild(this.stats1.domElement)
+
+    await updateLoadingProgressBar(1.0)
   },
   // @param {number} interval - time elapsed between 2 frames
   // @param {number} elapsed - total time elapsed since app start
