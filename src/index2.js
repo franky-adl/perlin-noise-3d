@@ -2,13 +2,13 @@
 import * as THREE from "three"
 import * as dat from 'dat.gui'
 import Stats from "three/examples/jsm/libs/stats.module"
-import { GPUComputationRenderer } from "three/examples/jsm/misc/GPUComputationRenderer"
 import { OrbitControls } from "three/examples/jsm/controls/OrbitControls"
 
 // Core boilerplate code deps
 import { createCamera, createRenderer, runApp, getDefaultUniforms, updateLoadingProgressBar } from "./core-utils"
 
-import HeightmapFragment from "./shaders/heightmapFragment.glsl"
+import simVertex from "./shaders/simVertex.glsl"
+import simFragment from "./shaders/simFragment.glsl"
 
 global.THREE = THREE
 // previously this feature is .legacyMode = false, see https://www.donmccurdy.com/2020/06/17/color-management-in-threejs/
@@ -110,19 +110,7 @@ let app = {
     this.planeMesh.updateMatrix()
     scene.add( this.planeMesh )
 
-    // Creates the gpu computation class and sets it up
-    this.gpuCompute = new GPUComputationRenderer( FBO_WIDTH, FBO_HEIGHT, renderer )
-    if ( renderer.capabilities.isWebGL2 === false ) {
-      this.gpuCompute.setDataType( THREE.HalfFloatType )
-    }
-
-    const heightmap0 = this.gpuCompute.createTexture()
-    this.heightmapVariable = this.gpuCompute.addVariable( 'heightmap', HeightmapFragment, heightmap0 )
-
-    const error = this.gpuCompute.init()
-    if ( error !== null ) {
-      console.error( error )
-    }
+    this.setUpFBO()
 
     // GUI controls
     const gui = new dat.GUI()
@@ -136,23 +124,26 @@ let app = {
 
     await updateLoadingProgressBar(1.0)
   },
-  fillTexture( texture ) {
-    const pixels = texture.image.data;
-
-    let p = 0;
-    for ( let j = 0; j < FBO_HEIGHT; j ++ ) {
-      for ( let i = 0; i < FBO_WIDTH; i ++ ) {
-        const x = i * 128 / FBO_WIDTH;
-        const y = j * 128 / FBO_HEIGHT;
-
-        pixels[ p + 0 ] = layeredNoise( x, y );
-        pixels[ p + 1 ] = 0;
-        pixels[ p + 2 ] = 0;
-        pixels[ p + 3 ] = 1;
-
-        p += 4;
-      }
-    }
+  setUpFBO() {
+    this.fboRT = new THREE.WebGLRenderTarget(FBO_WIDTH, FBO_HEIGHT, {
+      wrapS: THREE.RepeatWrapping,
+      wrapT: THREE.RepeatWrapping,
+      minFilter: THREE.NearestFilter,
+      magFilter: THREE.NearestFilter,
+      format: THREE.RGBAFormat,
+      type: THREE.FloatType
+    })
+    this.fboScene = new THREE.Scene()
+    this.fboCamera = new THREE.OrthographicCamera(-1,1,1,-1,-1,1)
+    this.fboCamera.position.set(0,0,0.5)
+    this.fboGeom = new THREE.PlaneGeometry(2,2)
+    this.fboMat = new THREE.ShaderMaterial({
+      uniforms: uniforms,
+      vertexShader: simVertex,
+      fragmentShader: simFragment
+    })
+    this.fboMesh = new THREE.Mesh(this.fboGeom, this.fboMat)
+    this.fboScene.add(this.fboMesh)
   },
   // @param {number} interval - time elapsed between 2 frames
   // @param {number} elapsed - total time elapsed since app start
@@ -160,10 +151,13 @@ let app = {
     this.controls.update()
     this.stats1.update()
 
-    // Do the gpgpu computation
-    this.gpuCompute.compute()
+    // render to the fbo
+    renderer.setRenderTarget(this.fboRT)
+    renderer.render(this.fboScene, this.fboCamera)
+    // reset render target so the actual scene can be rendered next
+    renderer.setRenderTarget(null)
 
-    this.planeMat.userData.heightmap.value = this.gpuCompute.getCurrentRenderTarget( this.heightmapVariable ).texture
+    this.planeMat.userData.heightmap.value = this.fboRT.texture
   }
 }
 
