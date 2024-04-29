@@ -20,8 +20,12 @@ THREE.ColorManagement.enabled = true
  *************************************************/
 const params = {
   // general scene params
+  light_intensity: 1.0
 }
-const uniforms = getDefaultUniforms()
+const uniforms = {
+  ...getDefaultUniforms(),
+  time_speed: { value: 0.1 },
+}
 // Texture width/height for simulation
 const FBO_WIDTH = 512
 const FBO_HEIGHT = 512
@@ -46,7 +50,7 @@ let renderer = createRenderer({ antialias: true }, (_renderer) => {
 
 // Create the camera
 // Pass in fov, near, far and camera position respectively
-let camera = createCamera(50, 0.01, 2000, { x: 0, y: 200, z: 350 })
+let camera = createCamera(50, 0.01, 2000, { x: -220, y: 50, z: 220 }, { x: 0, y: -160, z: 0 })
 
 /**************************************************
  * 2. Build your scene in this threejs app
@@ -57,19 +61,19 @@ let camera = createCamera(50, 0.01, 2000, { x: 0, y: 200, z: 350 })
 let app = {
   async initScene() {
     // OrbitControls
-    this.controls = new OrbitControls(camera, renderer.domElement)
-    this.controls.enableDamping = true
+    // this.controls = new OrbitControls(camera, renderer.domElement)
+    // this.controls.enableDamping = true
 
     await updateLoadingProgressBar(0.1)
 
     scene.background = new THREE.Color(0x222222)
 
-    const sun = new THREE.DirectionalLight( 0xFFFFFF, 5.0 )
-    sun.position.set( 300, 400, 175 )
-    scene.add( sun )
-    const sun2 = new THREE.DirectionalLight( 0x40A040, 0.6 )
-    sun2.position.set( - 100, 350, - 200 )
-    scene.add( sun2 )
+    this.sun = new THREE.DirectionalLight( 0xFFFFFF, 2.5 )
+    this.sun.position.set( 300, 400, 175 )
+    scene.add( this.sun )
+    this.sun2 = new THREE.DirectionalLight( 0x40A09F, 0.3 )
+    this.sun2.position.set( - 100, 350, - 200 )
+    scene.add( this.sun2 )
 
     const plane = new THREE.PlaneGeometry( GEOM_WIDTH, GEOM_HEIGHT, FBO_WIDTH - 1, FBO_HEIGHT - 1 )
     this.planeMat = new THREE.MeshPhongMaterial({
@@ -82,25 +86,45 @@ let app = {
     
     this.planeMat.onBeforeCompile = (shader) => {
       shader.uniforms.heightmap = this.planeMat.userData.heightmap
+
+      // vertex shader replacements
       shader.vertexShader = shader.vertexShader.replace('#include <common>', `
         uniform sampler2D heightmap;
+        varying float hV;
         #include <common>
       `)
       shader.vertexShader = shader.vertexShader.replace('#include <beginnormal_vertex>', `
         // Compute normal from heightmap
         // adding an offset to uv and apply fract below fixed the edge-clamped texture issue
         // and we'd need to use a periodic noise to help us achieve this
-        vec2 cUv = uv + vec2(0.1);
         vec2 cellSize = vec2( 1.0 / (${FBO_WIDTH.toFixed( 1 )}), 1.0 / ${FBO_HEIGHT.toFixed( 1 )} );
         vec3 objectNormal = vec3(
-          ( texture2D( heightmap, fract(cUv + vec2( - cellSize.x, 0 )) ).x - texture2D( heightmap, fract(cUv + vec2( cellSize.x, 0 )) ).x ) * ${FBO_WIDTH.toFixed( 1 )} / ${GEOM_WIDTH.toFixed( 1 )},
-          ( texture2D( heightmap, fract(cUv + vec2( 0, - cellSize.y )) ).x - texture2D( heightmap, fract(cUv + vec2( 0, cellSize.y )) ).x ) * ${FBO_HEIGHT.toFixed( 1 )} / ${GEOM_HEIGHT.toFixed( 1 )},
+          ( texture2D( heightmap, uv + vec2( - cellSize.x, 0 ) ).x - texture2D( heightmap, uv + vec2( cellSize.x, 0 ) ).x ) * ${FBO_WIDTH.toFixed( 1 )} / ${GEOM_WIDTH.toFixed( 1 )},
+          ( texture2D( heightmap, uv + vec2( 0, - cellSize.y ) ).x - texture2D( heightmap, uv + vec2( 0, cellSize.y ) ).x ) * ${FBO_HEIGHT.toFixed( 1 )} / ${GEOM_HEIGHT.toFixed( 1 )},
           1.0 );
       `)
       shader.vertexShader = shader.vertexShader.replace('#include <begin_vertex>', `
-        float heightValue = texture2D( heightmap, fract(cUv) ).x;
-        vec3 transformed = vec3( position.x, position.y, heightValue );
+        hV = texture2D( heightmap, uv ).x;
+        vec3 transformed = vec3( position.x, position.y, hV );
       `)
+      
+      // fragment shader replacements
+      shader.fragmentShader = shader.fragmentShader.replace('#include <common>', `
+        uniform sampler2D heightmap;
+        varying float hV;
+        #include <common>
+
+        // https://iquilezles.org/articles/palettes/
+        // https://www.shadertoy.com/view/ll2GD3
+        vec3 pal( in float t, in vec3 a, in vec3 b, in vec3 c, in vec3 d )
+        {
+          return a + b*cos( 6.28318*(c*t+d) );
+        }
+      `)
+      shader.fragmentShader = shader.fragmentShader.replace('vec4 diffuseColor = vec4( diffuse, opacity );', `
+        //vec4 diffuseColor = vec4( pal(hV * 0.5, vec3(0.5), vec3(0.5), vec3(1.0), vec3(0.,0.1,0.2)), opacity );
+        vec4 diffuseColor = vec4( pal(hV * 2., vec3(0.5), vec3(0.5), vec3(1.0, 0.7, 0.4), vec3(0.,0.15,0.2)), opacity );
+      `);
     }
 
     this.planeMesh = new THREE.Mesh( plane, this.planeMat )
@@ -114,6 +138,11 @@ let app = {
 
     // GUI controls
     const gui = new dat.GUI()
+    gui.add(uniforms.time_speed, "value", 0.0, 1.0, 0.001).name("Time Speed")
+    gui.add(params, "light_intensity", 0.0, 2.0, 0.01).name("Scene Brightness").onChange((val) => {
+      this.sun.intensity = 2.5 * val
+      this.sun2.intensity = 0.3 * val
+    })
 
     // Stats - show fps
     this.stats1 = new Stats()
@@ -148,7 +177,7 @@ let app = {
   // @param {number} interval - time elapsed between 2 frames
   // @param {number} elapsed - total time elapsed since app start
   updateScene(interval, elapsed) {
-    this.controls.update()
+    // this.controls.update()
     this.stats1.update()
 
     // render to the fbo
